@@ -31,7 +31,7 @@ func NewTermometer(merk string, value int) raspyberryService {
 	return termometer{merk: merk, value: value}
 }
 
-func SendInformation1(channel chan<- interface{}) {
+func SendInformation1(channel chan<- string) {
 
 	randomValue := rand.Intn(40 - 20 + 1)
 	termometer1 := NewTermometer("termometer 1", randomValue)
@@ -40,11 +40,11 @@ func SendInformation1(channel chan<- interface{}) {
 
 	channel <- termometer1.getFullInformation()
 
-	fmt.Println("send info from termometer", termometer1.getFullInformation())
+	fmt.Println("send info from = ", termometer1.getFullInformation())
 
 }
 
-func SendInformation2(channel chan<- interface{}) {
+func SendInformation2(channel chan<- string) {
 
 	randomValue := rand.Intn(40 - 20 + 1)
 	termometer1 := NewTermometer("termometer 2", randomValue)
@@ -53,12 +53,12 @@ func SendInformation2(channel chan<- interface{}) {
 
 	channel <- termometer1.getFullInformation()
 
-	fmt.Println("send info from termometer", termometer1.getFullInformation())
+	fmt.Println("send info from = ", termometer1.getFullInformation())
 
 }
 
-func ReceipInformation(channel <-chan interface{}) {
-	time.Sleep(5 * time.Second)
+func ReceipInformation(channel <-chan string) {
+	time.Sleep(2 * time.Second)
 
 	data := <-channel
 	fmt.Println("receipt full information from", data)
@@ -66,17 +66,49 @@ func ReceipInformation(channel <-chan interface{}) {
 
 func TestReadInfo(t *testing.T) {
 
-	termometer1 := make(chan interface{})
-	termometer2 := make(chan interface{})
+	termometer1 := make(chan string, 2)
+	termometer2 := make(chan string, 2)
 	defer close(termometer1)
 	defer close(termometer2)
 
 	for {
+
 		time.Sleep(2 * time.Second)
 		go SendInformation1(termometer1)
 		go SendInformation2(termometer2)
 
 		go ReceipInformation(termometer1)
 		go ReceipInformation(termometer2)
+
+	}
+}
+
+func TestWithSelect(t *testing.T) {
+	termometer1 := make(chan string, 2)
+	termometer2 := make(chan string, 2)
+	defer close(termometer1)
+	defer close(termometer2)
+
+	go SendInformation1(termometer1)
+	go SendInformation2(termometer2)
+	counter := 0
+
+	for {
+		select {
+		case data1 := <-termometer1:
+			fmt.Println("receipt full information from", data1)
+			counter++
+
+		case data2 := <-termometer2:
+			fmt.Println("receipt full information from", data2)
+			counter++
+
+		default:
+			fmt.Println("menunggu data")
+		}
+
+		if counter == 2 {
+			break
+		}
 	}
 }
